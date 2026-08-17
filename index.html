@@ -434,11 +434,11 @@ const state = {
 };
 
 async function fetchSheet(name, bustCache=false){
-  // 캐시 우회: 타임스탬프 쿼리 파라미터 (CORS-safe)
-  const bust = bustCache ? `?_=${Date.now()}` : '';
-  const url = `https://opensheet.elk.sh/${CONFIG.SHEET_ID}/${encodeURIComponent(name)}${bust}`;
+  // opensheet는 추가 쿼리파라미터를 거부(400)함 → 브라우저 fetch 옵션으로만 캐시 우회
+  const url = `https://opensheet.elk.sh/${CONFIG.SHEET_ID}/${encodeURIComponent(name)}`;
+  const opts = bustCache ? {cache: 'no-store'} : {};
   try {
-    const r = await fetch(url);
+    const r = await fetch(url, opts);
     if(!r.ok) throw new Error('HTTP ' + r.status);
     const data = await r.json();
     if(!Array.isArray(data)) throw new Error('데이터 형식 오류');
