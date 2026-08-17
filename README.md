@@ -9,14 +9,14 @@
 ## 🏗 구조
 
 - **프론트엔드**: 단일 `index.html` (HTML/CSS/JS 인라인) · GitHub Pages 호스팅
-- **데이터베이스**: 구글 시트 · [열기](https://docs.google.com/spreadsheets/d/1YCm6_0aT0olbAMdJUa6Z5n6SPk_vFHRNAWyDHRIGGkY/edit)
+- **데이터베이스**: 구글 시트 · [열기](https://docs.google.com/spreadsheets/d/1nXxRSQUMHYoL8dK4rODXT6MPfw967qLn8LALmd-dcvg/edit)
 - **시트 → JSON 프록시**: [opensheet.elk.sh](https://opensheet.elk.sh)
 - **지도**: Leaflet + OpenStreetMap (API 키 불필요)
 
 ## ✏️ 편집 방법
 
 ### 데이터 편집 (장소·일정 추가/수정)
-1. [구글 시트 열기](https://docs.google.com/spreadsheets/d/1YCm6_0aT0olbAMdJUa6Z5n6SPk_vFHRNAWyDHRIGGkY/edit)
+1. [구글 시트 열기](https://docs.google.com/spreadsheets/d/1nXxRSQUMHYoL8dK4rODXT6MPfw967qLn8LALmd-dcvg/edit)
 2. `장소` 또는 `일정` 탭에서 직접 편집
 3. 저장하면 앱 새로고침 시 자동 반영 (몇 초 지연 있을 수 있음)
 
