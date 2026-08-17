@@ -126,10 +126,12 @@
   .filter-bar .chip{flex:0 0 auto;user-select:none}
   .map-wrap{border-radius:16px;overflow:hidden;border:1px solid var(--line);position:relative;background:#1a2338}
   #mapMain{width:100%;height:60vh;min-height:340px}
-  .gmap-marker{width:34px;height:44px;position:relative;transform:translate(-50%,-100%);cursor:pointer;filter:drop-shadow(0 3px 6px rgba(0,0,0,.6))}
-  .gmap-marker .pin{width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;border:2.5px solid #fff;position:absolute;top:0;left:0}
-  .gmap-marker .pin span{transform:rotate(45deg);font-size:16px;line-height:1}
-  .gmap-marker.stay-marker{filter:drop-shadow(0 4px 10px rgba(251,146,60,.6)) drop-shadow(0 3px 6px rgba(0,0,0,.4))}
+  /* 핀: 34x44 컨테이너, 팁이 (17,44) 위치 = Google 기본 앵커 (bottom-center)와 정확히 일치 */
+  .gmap-marker{width:34px;height:44px;position:relative;cursor:pointer;filter:drop-shadow(0 3px 5px rgba(0,0,0,.5));transition:transform .1s}
+  .gmap-marker:hover{transform:scale(1.1);transform-origin:center bottom}
+  .gmap-marker svg{display:block;position:absolute;top:0;left:0;pointer-events:none}
+  .gmap-marker .emoji{position:absolute;top:7px;left:0;right:0;text-align:center;font-size:15px;line-height:1;pointer-events:none}
+  .gmap-marker.stay-marker{filter:drop-shadow(0 4px 10px rgba(251,146,60,.6)) drop-shadow(0 3px 5px rgba(0,0,0,.4))}
   .gmap-info{padding:2px 4px;font-size:12px;color:#111;max-width:200px}
   .gmap-info b{font-size:13px;display:block;margin-bottom:2px}
   .gmap-info a{color:#0891b2;font-weight:600;font-size:11px}
@@ -673,11 +675,14 @@ function renderPlanBody(){
 function makePin(color, emoji, extraClass=''){
   const wrap = document.createElement('div');
   wrap.className = 'gmap-marker ' + extraClass;
-  const pin = document.createElement('div');
-  pin.className = 'pin';
-  pin.style.background = color;
-  pin.innerHTML = `<span>${emoji}</span>`;
-  wrap.appendChild(pin);
+  // SVG 핀: viewBox 34x44, path의 팁이 (17,44) — Google 기본 앵커와 정확히 일치
+  wrap.innerHTML = `
+    <svg width="34" height="44" viewBox="0 0 34 44" xmlns="http://www.w3.org/2000/svg">
+      <path d="M17 1 C8.2 1 1 8.2 1 17 c0 12.5 16 26 16 26 s16-13.5 16-26 C33 8.2 25.8 1 17 1 z"
+            fill="${color}" stroke="#fff" stroke-width="2"/>
+    </svg>
+    <span class="emoji">${emoji}</span>
+  `;
   return wrap;
 }
 function renderMapFilters(){
