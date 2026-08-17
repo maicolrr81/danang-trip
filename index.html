@@ -103,10 +103,10 @@
   /* ─── 일정 ─── */
   .day-tabs{display:flex;gap:8px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:none}
   .day-tabs::-webkit-scrollbar{display:none}
-  .day-tab{flex:0 0 auto;min-width:70px;padding:12px 14px;border-radius:14px;background:var(--card);border:1px solid var(--line);text-align:center;position:relative}
-  .day-tab .dt-date{font-size:17px;font-weight:800;color:var(--ink)}
-  .day-tab .dt-day{font-size:12px;color:var(--sub);margin-top:3px}
-  .day-tab .dt-count{position:absolute;top:6px;right:8px;background:var(--sub);color:var(--bg);font-size:11px;font-weight:700;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+  .day-tab{flex:0 0 auto;min-width:74px;padding:12px 14px;border-radius:14px;background:var(--card);border:1px solid var(--line);text-align:center;position:relative}
+  .day-tab .dt-date{font-size:17px;font-weight:800;color:var(--ink);line-height:1.1}
+  .day-tab .dt-day{font-size:12px;color:var(--sub);margin-top:4px;display:flex;align-items:center;justify-content:center;gap:5px}
+  .day-tab .dt-count{background:var(--sub);color:var(--bg);font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;line-height:1.3;min-width:18px;text-align:center}
   .day-tab.on{background:var(--brand);border-color:transparent;box-shadow:0 4px 12px rgba(45,212,191,.3)}
   .day-tab.on .dt-date,.day-tab.on .dt-day{color:#0a1220}
   .day-tab.on .dt-count{background:#0a1220;color:var(--brand)}
@@ -172,9 +172,13 @@
   /* ─── 상세 시트 (bottom sheet) ─── */
   .sheet-back{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:100;display:none;animation:fadeIn .2s}
   .sheet-back.on{display:block}
-  .sheet{position:fixed;bottom:0;left:0;right:0;max-width:500px;margin:0 auto;background:var(--panel);border-radius:24px 24px 0 0;z-index:101;transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);max-height:85vh;overflow-y:auto;padding-bottom:calc(20px + var(--safe-bot))}
+  .sheet{position:fixed;bottom:0;left:0;right:0;max-width:500px;margin:0 auto;background:var(--panel);border-radius:24px 24px 0 0;z-index:101;transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);max-height:88vh;overflow-y:auto;padding-bottom:calc(20px + var(--safe-bot));overscroll-behavior:contain}
   .sheet.on{transform:translateY(0)}
-  .sheet-drag{width:40px;height:4px;background:var(--line);border-radius:2px;margin:10px auto}
+  .sheet-header{position:sticky;top:0;background:linear-gradient(180deg,var(--panel) 0%,var(--panel) 70%,rgba(19,26,44,0));z-index:5;padding:10px 16px 4px;display:flex;justify-content:center;align-items:center;position:relative}
+  .sheet-drag{width:44px;height:5px;background:var(--line);border-radius:3px;cursor:grab}
+  .sheet-drag:active{cursor:grabbing}
+  .sheet-close{position:absolute;right:14px;top:8px;width:36px;height:36px;border-radius:50%;background:var(--card);border:1px solid var(--line);color:var(--ink);font-size:18px;font-weight:600;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .1s}
+  .sheet-close:active{transform:scale(.9)}
   .sheet-body{padding:6px 20px 20px}
   .sheet .cover{height:140px;border-radius:16px;position:relative;overflow:hidden;margin-bottom:14px;display:flex;align-items:flex-end;padding:14px}
   .sheet .cover .badge{background:rgba(0,0,0,.4);color:#fff;padding:7px 12px;border-radius:999px;font-size:13px;font-weight:600;backdrop-filter:blur(6px)}
@@ -221,10 +225,18 @@
   .taxi-name-vn{font-size:26px;font-weight:800;color:#111;line-height:1.2;margin-bottom:12px;letter-spacing:-0.3px}
   .taxi-addr{font-size:18px;font-weight:600;color:#222;line-height:1.5;padding:14px;background:#f5f5f7;border-radius:12px;border:2px dashed #ccc;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
 
+  /* 숙소 카드 인터랙션 + 뱃지 */
+  .stay-card{transition:transform .1s, border-color .15s}
+  .stay-card:active{transform:scale(.98)}
+  .stay-card:hover{border-color:var(--stay)}
+  .badge-info{background:rgba(56,189,248,.12);color:var(--sky);font-size:12px;font-weight:600;padding:5px 10px;border-radius:8px;display:inline-flex;align-items:center;gap:4px}
+
   /* 홈 미니 지도 */
-  .mini-map-wrap{border-radius:16px;overflow:hidden;border:1px solid var(--line);height:180px;position:relative}
+  .mini-map-wrap{border-radius:16px;overflow:hidden;border:1px solid var(--line);height:200px;position:relative;transition:transform .1s}
+  .mini-map-wrap:active{transform:scale(.98)}
   #mapHome{width:100%;height:100%}
-  .mini-map-info{position:absolute;bottom:8px;left:8px;right:8px;display:flex;gap:4px;flex-wrap:wrap;background:rgba(10,18,32,.85);backdrop-filter:blur(10px);padding:6px 8px;border-radius:10px}
+  .mini-map-info{position:absolute;bottom:8px;left:8px;right:8px;display:flex;gap:4px;flex-wrap:wrap;background:rgba(10,18,32,.85);backdrop-filter:blur(10px);padding:8px 10px;border-radius:10px}
+  .mini-map-hint{position:absolute;top:10px;right:10px;background:rgba(45,212,191,.95);color:#0a1220;font-size:11px;font-weight:700;padding:5px 10px;border-radius:999px;box-shadow:0 3px 8px rgba(0,0,0,.3)}
 </style>
 </head>
 <body>
@@ -357,7 +369,10 @@
 <!-- ═══════════ 상세 시트 ═══════════ -->
 <div class="sheet-back" id="sheet-back" onclick="closeSheet()"></div>
 <div class="sheet" id="sheet">
-  <div class="sheet-drag"></div>
+  <div class="sheet-header">
+    <div class="sheet-drag" id="sheet-drag"></div>
+    <button class="sheet-close" onclick="closeSheet()" aria-label="닫기">✕</button>
+  </div>
   <div class="sheet-body" id="sheet-body"></div>
 </div>
 
@@ -642,18 +657,24 @@ function renderHome(){
       </div>
     </div>
 
-    <div class="h3">🏨 숙소</div>
+    <div class="h3">🏨 숙소 <span style="text-transform:none;letter-spacing:0;color:var(--brand);font-weight:600;margin-left:6px">→ 탭하여 지도</span></div>
     ${CONFIG.STAYS.map((s, i) => `
-      <div class="card">
+      <div class="card stay-card" onclick='openStay(${i})' style="cursor:pointer">
         <div class="row"><b>${i === 0 ? '🏠' : '🏨'} ${s.name}</b><span class="chip stay">${i === 0 ? '1~2박' : '3~4박'}</span></div>
         <div class="muted" style="margin-top:6px">${s.in} 인 → ${s.out} 아웃</div>
         <div class="muted">${s.addr}</div>
+        <div style="margin-top:10px;display:flex;gap:6px">
+          <span class="badge-info">🗺 구글맵</span>
+          <span class="badge-info">🚕 택시</span>
+          ${s.phone ? `<span class="badge-info">📞 전화</span>` : ''}
+        </div>
       </div>`).join('')}
 
-    <div class="h3">🗺 지도 한눈에</div>
-    <div class="mini-map-wrap">
-      <div id="mapHome"></div>
-      <div class="mini-map-info">${catChips || '<span class="muted" style="font-size:11px">아직 등록된 장소 없음</span>'}</div>
+    <div class="h3">🗺 지도 한눈에 <span style="text-transform:none;letter-spacing:0;color:var(--brand);font-weight:600;margin-left:6px">→ 눌러서 크게 보기</span></div>
+    <div class="mini-map-wrap" onclick="switchTab('map')" style="cursor:pointer">
+      <div id="mapHome" style="pointer-events:none"></div>
+      <div class="mini-map-info">${catChips || '<span class="muted" style="font-size:12px">아직 등록된 장소 없음</span>'}</div>
+      <div class="mini-map-hint">👆 탭하여 전체 지도로</div>
     </div>
 
     <div class="h3">🆘 긴급 연락처</div>
@@ -712,8 +733,10 @@ function renderPlanTabs(){
     const cnt = state.plan.filter(p => p.day === d).length;
     return `<div class="day-tab ${d === state.activeDay ? 'on' : ''}" data-day="${d}">
       <div class="dt-date">${info.date}</div>
-      <div class="dt-day">${info.dow}·${d}</div>
-      ${cnt > 0 ? `<div class="dt-count">${cnt}</div>` : ''}
+      <div class="dt-day">
+        <span>${info.dow}·${d}</span>
+        ${cnt > 0 ? `<span class="dt-count">${cnt}</span>` : ''}
+      </div>
     </div>`;
   }).join('');
   el.querySelectorAll('.day-tab').forEach(t => t.addEventListener('click', () => {
@@ -730,14 +753,15 @@ function renderPlanBody(){
     return;
   }
   el.innerHTML = `<div class="timeline">
-    ${items.map(t => {
+    ${items.map((t, i) => {
       const c = cat(t.cat);
-      const placeObj = state.places.find(p => String(p.id) === String(t.placeId));
+      const globalIdx = state.plan.indexOf(t);
       return `<div class="tl-item">
         <div class="tl-time">${t.time || ''}</div>
-        <div class="tl-card" ${placeObj ? `onclick="openPlaceById('${placeObj.id}')"` : ''} style="${placeObj ? 'cursor:pointer' : ''}">
+        <div class="tl-card" onclick="openPlanItem(${globalIdx})" style="cursor:pointer">
           <div class="row"><span class="name">${t.name}</span><span class="chip ${c.chip}">${c.e} ${t.cat}</span></div>
           ${t.memo ? `<div class="memo">${t.memo}</div>` : ''}
+          <div style="margin-top:8px;color:var(--brand);font-size:12px;font-weight:600">탭하여 상세 보기 →</div>
         </div>
       </div>`;
     }).join('')}
@@ -982,6 +1006,147 @@ function closeSheet(){
   document.getElementById('sheet').classList.remove('on');
   document.getElementById('sheet-back').classList.remove('on');
 }
+
+// ESC 키로 닫기
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape' && document.getElementById('sheet').classList.contains('on')){
+    closeSheet();
+  }
+});
+
+// 드래그 (스와이프 다운)으로 닫기
+(function(){
+  const drag = document.getElementById('sheet-drag');
+  const sheet = document.getElementById('sheet');
+  if(!drag || !sheet) return;
+  let startY = null, currentY = 0;
+  const onStart = (e) => {
+    startY = (e.touches ? e.touches[0].clientY : e.clientY);
+    sheet.style.transition = 'none';
+  };
+  const onMove = (e) => {
+    if(startY === null) return;
+    const y = (e.touches ? e.touches[0].clientY : e.clientY);
+    currentY = Math.max(0, y - startY);
+    sheet.style.transform = `translateY(${currentY}px)`;
+  };
+  const onEnd = () => {
+    if(startY === null) return;
+    sheet.style.transition = '';
+    if(currentY > 100) closeSheet();
+    else sheet.style.transform = '';
+    startY = null; currentY = 0;
+  };
+  drag.addEventListener('touchstart', onStart, {passive:true});
+  drag.addEventListener('touchmove', onMove, {passive:true});
+  drag.addEventListener('touchend', onEnd);
+  drag.addEventListener('mousedown', onStart);
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup', onEnd);
+})();
+// 숙소 상세 시트
+function openStay(idx){
+  const s = CONFIG.STAYS[idx];
+  if(!s) return;
+  const gradient = `linear-gradient(135deg,${'#fb923c'},${'#fb923c'}88)`;
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lng}`;
+  const grabDeep = `grab://open?screenType=BOOKING&dropOffLatitude=${s.lat}&dropOffLongitude=${s.lng}&dropOffAddress=${encodeURIComponent(s.addr)}`;
+  const grabWeb = `https://open.grab.com/?screenType=BOOKING&dropOffLatitude=${s.lat}&dropOffLongitude=${s.lng}`;
+
+  document.getElementById('sheet-body').innerHTML = `
+    <div class="cover" style="background:${gradient}">
+      <span class="badge">🏨 숙소 · ${idx === 0 ? '1~2박' : '3~4박'}</span>
+    </div>
+    <h2 style="margin:0 0 4px;font-size:22px">${s.name}</h2>
+    <div class="muted">${s.short}</div>
+
+    <div class="h3">체크인 / 체크아웃</div>
+    <div class="card" style="padding:6px 14px">
+      <div class="kv"><span class="k">체크인</span><span class="v">${s.in}</span></div>
+      <div class="kv"><span class="k">체크아웃</span><span class="v">${s.out}</span></div>
+    </div>
+
+    <div class="h3">주소 (그랩 기사에게 보여주기)</div>
+    <div class="addr-copy">
+      <div class="vn">${s.addr}</div>
+      <button class="btn primary" onclick='copy(${JSON.stringify(s.addr)})'>📋 복사</button>
+    </div>
+
+    ${s.phone ? `
+      <a class="btn block primary" href="tel:${s.phone}" style="margin-top:10px">📞 숙소에 전화 (${s.phone})</a>
+    ` : ''}
+
+    <div class="cta-row">
+      <a class="btn block primary" href="${mapsUrl}" target="_blank" rel="noopener">🗺 구글맵 열기</a>
+      <a class="btn block" href="${grabDeep}" onclick="setTimeout(()=>{window.location='${grabWeb}'},400)">🚕 그랩 호출</a>
+    </div>
+  `;
+  document.getElementById('sheet-back').classList.add('on');
+  document.getElementById('sheet').classList.add('on');
+}
+
+// 일정 상세 시트 (시트의 메모·링크 등 표시)
+function openPlanItem(idx){
+  const t = state.plan[idx];
+  if(!t) return;
+  const c = cat(t.cat);
+  const info = dayLabel(t.day);
+  const gradient = `linear-gradient(135deg,${c.c},${c.c}88)`;
+  const placeObj = state.places.find(p => String(p.id) === String(t.placeId));
+
+  document.getElementById('sheet-body').innerHTML = `
+    <div class="cover" style="background:${gradient}">
+      <span class="badge">${c.e} ${t.cat}</span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+      <span class="chip stay" style="background:var(--brand);color:#0a1220">${t.day}</span>
+      <span class="muted" style="font-size:13px">${info.date} ${info.dow} · ${t.time || ''}</span>
+    </div>
+    <h2 style="margin:0 0 4px;font-size:22px">${t.name}</h2>
+
+    ${t.memo ? `
+      <div class="h3">📝 메모</div>
+      <div class="memo-item">${t.memo}</div>
+    ` : ''}
+
+    ${placeObj ? `
+      <div class="h3">📍 연결된 장소</div>
+      <div class="place-item" onclick='openPlaceById("${placeObj.id}")' style="margin:0">
+        <div class="place-thumb" style="background:${cat(placeObj.cat).c}22">${cat(placeObj.cat).e}</div>
+        <div class="place-body">
+          <div class="place-name">${placeObj.name}</div>
+          <div class="place-vn">${placeObj.nameVn || placeObj.addr}</div>
+          ${placeObj.memo ? `<div class="place-meta"><span>💬 ${placeObj.memo.slice(0, 40)}${placeObj.memo.length > 40 ? '...' : ''}</span></div>` : ''}
+        </div>
+      </div>
+
+      ${placeObj.addr ? `
+        <div class="h3">주소</div>
+        <div class="addr-copy">
+          <div class="vn">${placeObj.addr}</div>
+          <button class="btn primary" onclick='copy(${JSON.stringify(placeObj.addr)})'>📋</button>
+        </div>
+      ` : ''}
+
+      ${placeObj.lat && placeObj.lng ? `
+        <div class="cta-row">
+          <a class="btn block primary" href="${placeObj.mapUrl || `https://www.google.com/maps/search/?api=1&query=${placeObj.lat},${placeObj.lng}`}" target="_blank" rel="noopener">🗺 구글맵 열기</a>
+          <button class="btn block" onclick='closeSheet();setTimeout(()=>openTaxiMode(${JSON.stringify(placeObj)}),350)'>🚕 택시 부르기</button>
+        </div>
+      ` : ''}
+
+      <button class="btn block" style="margin-top:10px" onclick='openPlaceById("${placeObj.id}")'>장소 상세 전체 보기 →</button>
+    ` : `
+      <div class="banner" style="margin:14px 0 0">
+        📍 이 일정은 특정 장소와 연결되어 있지 않아요.<br>
+        시트의 <b>일정</b> 탭에서 <b>장소ID</b>를 채우면 지도·연락처가 자동 연결됩니다.
+      </div>
+    `}
+  `;
+  document.getElementById('sheet-back').classList.add('on');
+  document.getElementById('sheet').classList.add('on');
+}
+
 function openAddPlace(){
   document.getElementById('sheet-body').innerHTML = `
     <h2 style="margin:0 0 8px;font-size:20px">＋ 장소 추가</h2>
