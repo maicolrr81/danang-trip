@@ -9,8 +9,16 @@
 <meta name="apple-mobile-web-app-title" content="다낭 여행" />
 <title>다낭 가족여행</title>
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  window.gmapsReady = false;
+  window.initGMaps = () => {
+    window.gmapsReady = true;
+    window.dispatchEvent(new CustomEvent('gmaps-ready'));
+  };
+</script>
+<script async
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAO2YwmkQq8UGtFXXSA2NKrGKJJJOUNj6c&loading=async&libraries=marker&callback=initGMaps&v=weekly&language=ko&region=VN">
+</script>
 
 <style>
   :root{
@@ -115,15 +123,21 @@
   .filter-bar{display:flex;gap:6px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:none}
   .filter-bar::-webkit-scrollbar{display:none}
   .filter-bar .chip{flex:0 0 auto;user-select:none}
-  .map-wrap{border-radius:16px;overflow:hidden;border:1px solid var(--line);position:relative}
+  .map-wrap{border-radius:16px;overflow:hidden;border:1px solid var(--line);position:relative;background:#1a2338}
   #mapMain{width:100%;height:60vh;min-height:340px}
-  .leaflet-container{background:#0f1729;font-family:inherit}
-  .leaflet-tile{filter:brightness(.7) invert(1) contrast(3) hue-rotate(200deg) saturate(.3) brightness(.7)}
-  .marker-pin{width:32px;height:32px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(0,0,0,.5);border:2.5px solid #fff}
-  .marker-pin span{transform:rotate(45deg);font-size:15px}
-  .leaflet-popup-content-wrapper{background:var(--card);color:var(--ink);border-radius:12px}
-  .leaflet-popup-tip{background:var(--card)}
-  .leaflet-popup-content{margin:10px 14px;font-size:13px}
+  .gmap-marker{width:34px;height:44px;position:relative;transform:translate(-50%,-100%);cursor:pointer;filter:drop-shadow(0 3px 6px rgba(0,0,0,.6))}
+  .gmap-marker .pin{width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;border:2.5px solid #fff;position:absolute;top:0;left:0}
+  .gmap-marker .pin span{transform:rotate(45deg);font-size:16px;line-height:1}
+  .gmap-marker.stay-marker{filter:drop-shadow(0 4px 10px rgba(251,146,60,.6)) drop-shadow(0 3px 6px rgba(0,0,0,.4))}
+  .gmap-info{padding:2px 4px;font-size:12px;color:#111;max-width:200px}
+  .gmap-info b{font-size:13px;display:block;margin-bottom:2px}
+  .gmap-info a{color:#0891b2;font-weight:600;font-size:11px}
+  /* Google Maps 다크 팝업 */
+  .gm-style-iw{background:var(--card)!important;color:var(--ink)!important;border-radius:12px!important;padding:10px!important}
+  .gm-style-iw-d{overflow:auto!important;color:var(--ink)!important}
+  .gm-style-iw-c{padding:8px!important;background:var(--card)!important}
+  .gm-style-iw-tc::after{background:var(--card)!important}
+  .gm-ui-hover-effect{filter:invert(1)}
 
   /* ─── 장소 리스트 ─── */
   .place-item{display:flex;gap:12px;padding:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:8px;cursor:pointer;transition:transform .1s}
@@ -476,9 +490,14 @@ function switchTab(name){
   document.getElementById('screen-' + name).classList.add('on');
   document.querySelector(`[data-tab="${name}"]`).classList.add('on');
   window.scrollTo(0, 0);
-  // 지도는 탭 활성화 후에 사이즈 재계산 필요
-  if(name === 'map' && state.mapMain) setTimeout(() => state.mapMain.invalidateSize(), 100);
-  if(name === 'home' && state.mapHome) setTimeout(() => state.mapHome.invalidateSize(), 100);
+  // 지도 탭 활성화되면 초기화 or 사이즈 재계산
+  if(name === 'map'){
+    if(!state.mapMain) initMap();
+    else setTimeout(() => google.maps.event.trigger(state.mapMain, 'resize'), 100);
+  }
+  if(name === 'home' && state.mapHome){
+    setTimeout(() => google.maps.event.trigger(state.mapHome, 'resize'), 100);
+  }
 }
 document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
 
@@ -569,23 +588,39 @@ function renderHome(){
     </div>
   `;
 
-  // 홈 지도 초기화
-  setTimeout(() => {
-    if(state.mapHome) { state.mapHome.remove(); state.mapHome = null; }
+  // 홈 미니 지도 초기화 (구글 지도 로드 후)
+  const initHomeMap = async () => {
+    if(!window.gmapsReady){
+      window.addEventListener('gmaps-ready', initHomeMap, {once:true});
+      return;
+    }
     const el = document.getElementById('mapHome');
     if(!el) return;
-    state.mapHome = L.map('mapHome', {zoomControl:false, attributionControl:false, dragging:false, scrollWheelZoom:false, doubleClickZoom:false, boxZoom:false, touchZoom:false});
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(state.mapHome);
-    const bounds = [];
+    const { Map } = await google.maps.importLibrary("maps");
+    const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
+    state.mapHome = new Map(el, {
+      center: {lat:16.055, lng:108.245}, zoom: 12,
+      mapId: "DEMO_MAP_ID",
+      disableDefaultUI: true,
+      gestureHandling: 'none',
+      clickableIcons: false,
+    });
+    const bounds = new google.maps.LatLngBounds();
+    let cnt = 0;
     state.places.forEach(p => {
       if(p.lat && p.lng){
-        L.marker([p.lat, p.lng], {icon: makePin(cat(p.cat).c, cat(p.cat).e)}).addTo(state.mapHome);
-        bounds.push([p.lat, p.lng]);
+        new AdvancedMarkerElement({
+          position:{lat:p.lat, lng:p.lng},
+          map: state.mapHome,
+          content: makePin(cat(p.cat).c, cat(p.cat).e),
+        });
+        bounds.extend({lat:p.lat, lng:p.lng});
+        cnt++;
       }
     });
-    if(bounds.length > 0) state.mapHome.fitBounds(bounds, {padding:[20,20]});
-    else state.mapHome.setView([16.055, 108.245], 12);
-  }, 50);
+    if(cnt > 0) state.mapHome.fitBounds(bounds, 30);
+  };
+  setTimeout(initHomeMap, 50);
 }
 
 /* ═══════════════════════════════════════
@@ -634,11 +669,15 @@ function renderPlanBody(){
 /* ═══════════════════════════════════════
    지도 렌더
    ═══════════════════════════════════════ */
-function makePin(color, emoji){
-  return L.divIcon({
-    className:'', iconSize:[32,32], iconAnchor:[16,32],
-    html:`<div class="marker-pin" style="background:${color}"><span>${emoji}</span></div>`,
-  });
+function makePin(color, emoji, extraClass=''){
+  const wrap = document.createElement('div');
+  wrap.className = 'gmap-marker ' + extraClass;
+  const pin = document.createElement('div');
+  pin.className = 'pin';
+  pin.style.background = color;
+  pin.innerHTML = `<span>${emoji}</span>`;
+  wrap.appendChild(pin);
+  return wrap;
 }
 function renderMapFilters(){
   const el = document.getElementById('map-filters');
@@ -661,29 +700,53 @@ function renderMapFilters(){
   }));
   document.getElementById('map-sub').textContent = `📍 ${total}곳 · ${state.places.length}개 등록됨`;
 }
-function renderMapMarkers(){
+async function renderMapMarkers(){
   if(!state.mapMain) return;
-  state.mapMarkers.forEach(m => state.mapMain.removeLayer(m));
+  const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
+  state.mapMarkers.forEach(m => m.map = null);
   state.mapMarkers = [];
   const filtered = state.places.filter(p => {
     if(!p.lat || !p.lng) return false;
     if(state.mapFilters.size === 0) return true;
     return state.mapFilters.has(p.cat);
   });
-  const bounds = [];
+  const bounds = new google.maps.LatLngBounds();
   filtered.forEach(p => {
     const c = cat(p.cat);
-    const m = L.marker([p.lat, p.lng], {icon: makePin(c.c, c.e)}).addTo(state.mapMain);
-    m.on('click', () => openPlace(p));
-    state.mapMarkers.push(m);
-    bounds.push([p.lat, p.lng]);
+    const marker = new AdvancedMarkerElement({
+      position: {lat: p.lat, lng: p.lng},
+      map: state.mapMain,
+      content: makePin(c.c, c.e, p.cat === '숙소' ? 'stay-marker' : ''),
+      title: p.name,
+      gmpClickable: true,
+    });
+    marker.addListener('click', () => openPlace(p));
+    state.mapMarkers.push(marker);
+    bounds.extend({lat: p.lat, lng: p.lng});
   });
-  if(bounds.length > 0) state.mapMain.fitBounds(bounds, {padding:[30,30], maxZoom:14});
+  if(filtered.length > 0){
+    state.mapMain.fitBounds(bounds, 40);
+    if(filtered.length === 1) state.mapMain.setZoom(15);
+  }
 }
-function initMap(){
+async function initMap(){
   if(state.mapMain) return;
-  state.mapMain = L.map('mapMain', {zoomControl:true, attributionControl:false}).setView([16.055, 108.245], 12);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(state.mapMain);
+  if(!window.gmapsReady){
+    window.addEventListener('gmaps-ready', initMap, {once:true});
+    return;
+  }
+  const { Map } = await google.maps.importLibrary("maps");
+  state.mapMain = new Map(document.getElementById('mapMain'), {
+    center: {lat:16.055, lng:108.245}, zoom: 12,
+    mapId: "DEMO_MAP_ID",
+    disableDefaultUI: false,
+    zoomControl: true,
+    mapTypeControl: false,
+    streetViewControl: false,
+    fullscreenControl: false,
+    clickableIcons: true,
+    gestureHandling: 'greedy',
+  });
   renderMapMarkers();
 }
 
@@ -890,8 +953,8 @@ async function init(){
   renderPlanBody();
   renderMapFilters();
   renderPhrases();
-  initMap();
   renderPlaces();
+  // 지도 탭 눌렀을 때 initMap() 호출됨 (switchTab에서)
 }
 init();
 </script>
