@@ -391,9 +391,11 @@ const CONFIG = {
     out: {code:'VN0431', from:'ICN', to:'DAD', dep:'11:05', arr:'13:50', date:'10/22 목'},
     ret: {code:'VN0430', from:'DAD', to:'ICN', dep:'23:30', arr:'05:45+1', date:'10/26 월'},
   },
-  STAYS: [
-    {name:'Sila Prana Villa', short:'풀빌라', addr:'16 Morrison, An Hải, Đà Nẵng 50000', in:'10/22 14:00', out:'10/24 11:00', lat:16.0838, lng:108.2445},
-    {name:'다낭 메리어트 리조트', short:'메리어트', addr:'Truong Sa, Ngu Hanh Son, Đà Nẵng', in:'10/24 15:00', out:'10/26 12:00', lat:16.0313, lng:108.2632, phone:'+842363966888'},
+  // 숙소는 시트의 카테고리='숙소'에서 자동으로 읽어옴
+  // 아래는 시트에 없는 부가정보 (체크인/아웃 시간, 전화번호) — 순서대로 매칭됨
+  STAY_META: [
+    {label:'1~2박', in:'10/22 14:00', out:'10/24 11:00', phone:''},
+    {label:'3~4박', in:'10/24 15:00', out:'10/26 12:00', phone:'+842363966888'},
   ],
   EMERGENCY: [
     {name:'🏨 메리어트 리조트', phone:'+842363966888'},
@@ -432,27 +434,38 @@ const state = {
 };
 
 async function fetchSheet(name, bustCache=false){
+  // 캐시 우회: 타임스탬프 쿼리 파라미터 (CORS-safe)
   const bust = bustCache ? `?_=${Date.now()}` : '';
   const url = `https://opensheet.elk.sh/${CONFIG.SHEET_ID}/${encodeURIComponent(name)}${bust}`;
   try {
-    const r = await fetch(url, {cache: bustCache ? 'reload' : 'default'});
-    if(!r.ok) throw new Error(r.status);
-    return await r.json();
+    const r = await fetch(url);
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    if(!Array.isArray(data)) throw new Error('데이터 형식 오류');
+    return data;
   } catch(e) {
-    console.warn('Sheet fetch failed:', name, e);
+    console.warn('[Sheet fetch failed]', name, e.message);
     return null;
   }
 }
 
 async function loadAll(bustCache=false){
+  state.error = null; // 매 로드마다 에러 초기화
   const [places, plan, phrases] = await Promise.all([
     fetchSheet('장소', bustCache),
     fetchSheet('일정', bustCache),
     fetchSheet('회화', bustCache),
   ]);
 
+  // 하나라도 실패하면: 기존 데이터 유지 (덮어쓰기 X)
+  if(!places && !plan && !phrases){
+    // 전부 실패 → 네트워크 문제
+    state.error = '네트워크 오류. 잠시 후 다시 시도해주세요.';
+    return;
+  }
   if(!places || !plan){
-    state.error = '시트에서 데이터를 불러오지 못했습니다. 시트 공유 설정을 확인해주세요.';
+    // 필수 데이터 실패
+    state.error = '일부 시트를 불러오지 못했습니다. 시트 공유 설정을 확인해주세요.';
     return;
   }
 
@@ -504,10 +517,17 @@ async function refreshData(){
   btn.classList.add('loading');
   sync.classList.remove('on');
   toast('시트에서 데이터 불러오는 중...');
-  await loadAll(true); // 캐시 무시하고 다시 로드
+  // 이전 상태 백업 (실패 시 롤백)
+  const backup = {places: state.places, plan: state.plan, phrases: state.phrases};
+  await loadAll(true);
   btn.classList.remove('loading');
   if(state.error){
-    toast('❌ 로드 실패 — 시트 공유 확인');
+    // 실패 시 이전 데이터 유지 (화면 유지)
+    state.places = backup.places;
+    state.plan = backup.plan;
+    state.phrases = backup.phrases;
+    toast('❌ ' + state.error);
+    console.warn('[Refresh 실패 — 이전 데이터 유지]');
     return;
   }
   // 모든 화면 재렌더
@@ -562,6 +582,8 @@ function currentDayCode(){
   return map[today] || null;
 }
 function cat(name){ return CATS[name] || CATS.기타; }
+// 시트의 카테고리='숙소'인 장소들 (등록 순서 유지)
+function getStays(){ return state.places.filter(p => p.cat === '숙소'); }
 function wonFromVnd(v){ return Math.round(v * CONFIG.RATE_VND_TO_KRW); }
 function toast(msg){
   const t = document.getElementById('toast');
@@ -658,17 +680,26 @@ function renderHome(){
     </div>
 
     <div class="h3">🏨 숙소 <span style="text-transform:none;letter-spacing:0;color:var(--brand);font-weight:600;margin-left:6px">→ 탭하여 지도</span></div>
-    ${CONFIG.STAYS.map((s, i) => `
-      <div class="card stay-card" onclick='openStay(${i})' style="cursor:pointer">
-        <div class="row"><b>${i === 0 ? '🏠' : '🏨'} ${s.name}</b><span class="chip stay">${i === 0 ? '1~2박' : '3~4박'}</span></div>
-        <div class="muted" style="margin-top:6px">${s.in} 인 → ${s.out} 아웃</div>
-        <div class="muted">${s.addr}</div>
-        <div style="margin-top:10px;display:flex;gap:6px">
-          <span class="badge-info">🗺 구글맵</span>
-          <span class="badge-info">🚕 택시</span>
-          ${s.phone ? `<span class="badge-info">📞 전화</span>` : ''}
-        </div>
-      </div>`).join('')}
+    ${(() => {
+      const stays = getStays();
+      if(stays.length === 0){
+        return `<div class="banner">시트의 <b>장소</b> 탭에서 카테고리를 <b>숙소</b>로 지정하면 여기 표시됩니다.</div>`;
+      }
+      return stays.map((s, i) => {
+        const meta = CONFIG.STAY_META[i] || {label:`${i+1}번째 숙소`, in:'', out:''};
+        return `
+          <div class="card stay-card" onclick='openStay("${s.id}")' style="cursor:pointer">
+            <div class="row"><b>${i === 0 ? '🏠' : '🏨'} ${s.name}</b><span class="chip stay">${meta.label}</span></div>
+            ${meta.in ? `<div class="muted" style="margin-top:6px">${meta.in} 인 → ${meta.out} 아웃</div>` : ''}
+            <div class="muted">${s.addr}</div>
+            <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+              <span class="badge-info">🗺 구글맵</span>
+              <span class="badge-info">🚕 택시</span>
+              ${meta.phone ? `<span class="badge-info">📞 전화</span>` : ''}
+            </div>
+          </div>`;
+      }).join('');
+    })()}
 
     <div class="h3">🗺 지도 한눈에 <span style="text-transform:none;letter-spacing:0;color:var(--brand);font-weight:600;margin-left:6px">→ 눌러서 크게 보기</span></div>
     <div class="mini-map-wrap" onclick="switchTab('map')" style="cursor:pointer">
@@ -1044,27 +1075,34 @@ document.addEventListener('keydown', e => {
   window.addEventListener('mousemove', onMove);
   window.addEventListener('mouseup', onEnd);
 })();
-// 숙소 상세 시트
-function openStay(idx){
-  const s = CONFIG.STAYS[idx];
+// 숙소 상세 시트 (시트 데이터 기반)
+function openStay(placeId){
+  const s = state.places.find(p => String(p.id) === String(placeId));
   if(!s) return;
-  const gradient = `linear-gradient(135deg,${'#fb923c'},${'#fb923c'}88)`;
-  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lng}`;
+  const stays = getStays();
+  const idx = stays.findIndex(x => String(x.id) === String(placeId));
+  const meta = CONFIG.STAY_META[idx] || {label:'', in:'', out:'', phone:''};
+  const gradient = `linear-gradient(135deg,#fb923c,#fb923c88)`;
+  const mapsUrl = s.mapUrl || `https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lng}`;
   const grabDeep = `grab://open?screenType=BOOKING&dropOffLatitude=${s.lat}&dropOffLongitude=${s.lng}&dropOffAddress=${encodeURIComponent(s.addr)}`;
   const grabWeb = `https://open.grab.com/?screenType=BOOKING&dropOffLatitude=${s.lat}&dropOffLongitude=${s.lng}`;
 
   document.getElementById('sheet-body').innerHTML = `
     <div class="cover" style="background:${gradient}">
-      <span class="badge">🏨 숙소 · ${idx === 0 ? '1~2박' : '3~4박'}</span>
+      <span class="badge">🏨 숙소${meta.label ? ' · ' + meta.label : ''}</span>
     </div>
     <h2 style="margin:0 0 4px;font-size:22px">${s.name}</h2>
-    <div class="muted">${s.short}</div>
+    <div class="muted">${s.nameVn || ''}${s.rating ? ` · ⭐ ${s.rating}` : ''}</div>
 
-    <div class="h3">체크인 / 체크아웃</div>
-    <div class="card" style="padding:6px 14px">
-      <div class="kv"><span class="k">체크인</span><span class="v">${s.in}</span></div>
-      <div class="kv"><span class="k">체크아웃</span><span class="v">${s.out}</span></div>
-    </div>
+    ${s.memo ? `<div class="memo-item" style="margin-top:14px">${s.memo}</div>` : ''}
+
+    ${meta.in ? `
+      <div class="h3">체크인 / 체크아웃</div>
+      <div class="card" style="padding:6px 14px">
+        <div class="kv"><span class="k">체크인</span><span class="v">${meta.in}</span></div>
+        <div class="kv"><span class="k">체크아웃</span><span class="v">${meta.out}</span></div>
+      </div>
+    ` : ''}
 
     <div class="h3">주소 (그랩 기사에게 보여주기)</div>
     <div class="addr-copy">
@@ -1072,8 +1110,8 @@ function openStay(idx){
       <button class="btn primary" onclick='copy(${JSON.stringify(s.addr)})'>📋 복사</button>
     </div>
 
-    ${s.phone ? `
-      <a class="btn block primary" href="tel:${s.phone}" style="margin-top:10px">📞 숙소에 전화 (${s.phone})</a>
+    ${meta.phone ? `
+      <a class="btn block primary" href="tel:${meta.phone}" style="margin-top:10px">📞 숙소에 전화 (${meta.phone})</a>
     ` : ''}
 
     <div class="cta-row">
