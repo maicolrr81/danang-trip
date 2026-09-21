@@ -270,10 +270,12 @@
   #mapPlan{width:100%;height:100%}
   .plan-map-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--sub);font-size:13px;background:var(--card);text-align:center;padding:20px;line-height:1.5}
   .plan-map-empty[hidden]{display:none !important}
-  /* 번호 마커 — 원 중심이 실제 좌표에 오도록 center-anchor로 오버라이드 */
-  .num-marker{width:34px;height:34px;position:relative;cursor:pointer;filter:drop-shadow(0 4px 8px rgba(0,0,0,.5)) drop-shadow(0 0 12px rgba(94,234,212,.4));transform:translate(-50%,-50%);transition:transform .12s}
-  .num-marker:hover{transform:translate(-50%,-50%) scale(1.15)}
-  .num-marker .circle{width:34px;height:34px;border-radius:50%;border:2.5px solid #fff;display:flex;align-items:center;justify-content:center;color:#0b0d1e;font-size:14px;font-weight:900;background:linear-gradient(135deg,#5eead4,#a78bfa)}
+  /* 번호 마커 — 원 중심이 실제 좌표에 오도록 center-anchor로 강제 오버라이드
+     (Google AdvancedMarker가 inline style로 translate(-50%,-100%)을 넣기 때문에 !important 필요) */
+  .num-marker{width:34px;height:34px;position:relative;cursor:pointer;filter:drop-shadow(0 4px 8px rgba(0,0,0,.5)) drop-shadow(0 0 12px rgba(94,234,212,.4));transform:translate(-50%,-50%) !important;transition:filter .12s}
+  .num-marker:hover{filter:drop-shadow(0 6px 12px rgba(0,0,0,.6)) drop-shadow(0 0 16px rgba(94,234,212,.6))}
+  .num-marker .circle{width:34px;height:34px;border-radius:50%;border:2.5px solid #fff;display:flex;align-items:center;justify-content:center;color:#0b0d1e;font-size:14px;font-weight:900;background:linear-gradient(135deg,#5eead4,#a78bfa);transition:transform .12s}
+  .num-marker:hover .circle{transform:scale(1.15)}
   /* 일정 리스트 (참고 이미지 스타일) */
   .plan-list{margin-top:4px;position:relative}
   .plan-list::before{content:'';position:absolute;left:17px;top:18px;bottom:18px;width:2px;background:linear-gradient(180deg,rgba(94,234,212,.6) 0%,rgba(167,139,250,.6) 50%,rgba(244,114,182,.5) 100%);border-radius:2px;z-index:0;box-shadow:0 0 8px rgba(94,234,212,.15)}
@@ -1019,6 +1021,9 @@ function makeNumMarker(color, num){
   const wrap = document.createElement('div');
   wrap.className = 'num-marker';
   wrap.innerHTML = `<div class="circle" style="background:${color}">${num}</div>`;
+  // Google AdvancedMarker가 setup 후 inline transform을 덮어써도 CSS !important가 이기지만,
+  // 혹시나 걸림돌이 될까봐 inline priority로도 한번 더 못 박아둠
+  wrap.style.setProperty('transform', 'translate(-50%,-50%)', 'important');
   return wrap;
 }
 
