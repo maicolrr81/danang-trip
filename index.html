@@ -270,11 +270,12 @@
   #mapPlan{width:100%;height:100%}
   .plan-map-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--sub);font-size:13px;background:var(--card);text-align:center;padding:20px;line-height:1.5}
   .plan-map-empty[hidden]{display:none !important}
-  /* 번호 마커 — 원 중심이 실제 좌표에 오도록 center-anchor로 강제 오버라이드
-     (Google AdvancedMarker가 inline style로 translate(-50%,-100%)을 넣기 때문에 !important 필요) */
-  .num-marker{width:34px;height:34px;position:relative;cursor:pointer;filter:drop-shadow(0 4px 8px rgba(0,0,0,.5)) drop-shadow(0 0 12px rgba(94,234,212,.4));transform:translate(-50%,-50%) !important;transition:filter .12s}
-  .num-marker:hover{filter:drop-shadow(0 6px 12px rgba(0,0,0,.6)) drop-shadow(0 0 16px rgba(94,234,212,.6))}
-  .num-marker .circle{width:34px;height:34px;border-radius:50%;border:2.5px solid #fff;display:flex;align-items:center;justify-content:center;color:#0b0d1e;font-size:14px;font-weight:900;background:linear-gradient(135deg,#5eead4,#a78bfa);transition:transform .12s}
+  /* 번호 마커 — transform을 일절 쓰지 않고 '박스 기하'만으로 원 중심을 좌표에 맞춤.
+     AdvancedMarker는 컨텐츠의 bottom-center를 좌표에 앵커한다(.gmap-marker 핀이 이 규약으로 정상 동작 중).
+     컨테이너를 34x17로 두고 원을 bottom:-17px로 아래로 반쯤 흘려보내면
+     원의 세로 중심 = 컨테이너 bottom = 좌표.  → 확대/축소 무관하게 항상 일치. */
+  .num-marker{width:34px;height:17px;position:relative;cursor:pointer;overflow:visible;filter:drop-shadow(0 4px 8px rgba(0,0,0,.5)) drop-shadow(0 0 12px rgba(94,234,212,.4))}
+  .num-marker .circle{position:absolute;left:0;bottom:-17px;width:34px;height:34px;border-radius:50%;border:2.5px solid #fff;display:flex;align-items:center;justify-content:center;color:#0b0d1e;font-size:14px;font-weight:900;background:linear-gradient(135deg,#5eead4,#a78bfa);transition:transform .12s}
   .num-marker:hover .circle{transform:scale(1.15)}
   /* 일정 리스트 (참고 이미지 스타일) */
   .plan-list{margin-top:4px;position:relative}
@@ -1015,15 +1016,50 @@ async function renderPlanMap(enriched){
 
   if(withCoords.length === 1) state.mapPlan.setZoom(15);
   state.mapPlan.fitBounds(bounds, 60);
+
+  // 앵커 자가진단: 첫 마커의 '원 중심' 화면좌표 vs 해당 위경도의 실제 투영 화면좌표 비교
+  if(withCoords.length){
+    google.maps.event.addListenerOnce(state.mapPlan, 'idle', () => {
+      setTimeout(() => checkAnchor(withCoords[0]), 300);
+    });
+  }
+}
+
+// 원 중심과 실제 좌표의 픽셀 오프셋을 콘솔에 출력 (0,0 이면 완벽 정렬)
+function checkAnchor(target){
+  try{
+    const ov = new google.maps.OverlayView();
+    ov.onAdd = function(){};
+    ov.draw = function(){
+      const proj = this.getProjection();
+      if(!proj) return;
+      const pt = proj.fromLatLngToContainerPixel(
+        new google.maps.LatLng(target.lat, target.lng)
+      );
+      const mapRect = document.getElementById('mapPlan').getBoundingClientRect();
+      const trueX = mapRect.left + pt.x, trueY = mapRect.top + pt.y;
+      const circle = document.querySelector('#mapPlan .num-marker .circle');
+      if(!circle) return;
+      const r = circle.getBoundingClientRect();
+      const dx = (r.left + r.width/2) - trueX;
+      const dy = (r.top + r.height/2) - trueY;
+      console.log(
+        `%c[앵커 진단] dx=${dx.toFixed(1)}px  dy=${dy.toFixed(1)}px  ${Math.abs(dx)<2&&Math.abs(dy)<2?'✅ 정렬 OK':'❌ 어긋남'}`,
+        'font-size:13px;font-weight:bold;color:' + (Math.abs(dx)<2&&Math.abs(dy)<2 ? '#10b981':'#ef4444')
+      );
+      ov.setMap(null);
+    };
+    ov.onRemove = function(){};
+    ov.setMap(state.mapPlan);
+  }catch(e){ console.warn('앵커 진단 실패', e); }
 }
 
 function makeNumMarker(color, num){
   const wrap = document.createElement('div');
   wrap.className = 'num-marker';
   wrap.innerHTML = `<div class="circle" style="background:${color}">${num}</div>`;
-  // Google AdvancedMarker가 setup 후 inline transform을 덮어써도 CSS !important가 이기지만,
-  // 혹시나 걸림돌이 될까봐 inline priority로도 한번 더 못 박아둠
-  wrap.style.setProperty('transform', 'translate(-50%,-50%)', 'important');
+  // transform은 절대 건드리지 않는다 — Google의 앵커 transform과 충돌/이중적용되기 때문.
+  // 정렬은 순수 CSS 박스 기하(.num-marker 34x17 + .circle bottom:-17px)로 처리됨.
   return wrap;
 }
 
