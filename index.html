@@ -889,8 +889,34 @@ function renderPlanBody(){
 async function renderPlanMap(enriched){
   const withCoords = enriched.filter(t => t.lat && t.lng);
   const emptyEl = document.getElementById('plan-map-empty');
+  // 진단 로그 (F12 콘솔에서 확인 가능)
+  console.log('[renderPlanMap]', {
+    day: state.activeDay,
+    itemsCount: enriched.length,
+    withCoordsCount: withCoords.length,
+    placesLoaded: state.places.length,
+    items: enriched.map(t => ({name: t.name, placeId: t.placeId, matched: !!t.place, lat: t.lat, lng: t.lng})),
+  });
   if(withCoords.length === 0){
-    if(emptyEl) emptyEl.hidden = false;
+    if(emptyEl){
+      // 상세 진단 메시지
+      const total = enriched.length;
+      const withPid = enriched.filter(t => t.placeId).length;
+      const matched = enriched.filter(t => t.place).length;
+      let msg;
+      if(state.places.length === 0){
+        msg = '📍 장소 데이터 없음 — 🔄 새로고침 눌러주세요';
+      } else if(withPid === 0){
+        msg = `📍 일정 ${total}개 모두 장소ID 비어있음<br><span style="font-size:11px">시트 [일정] 탭에서 장소ID 컬럼 채우기</span>`;
+      } else if(matched < withPid){
+        const missing = enriched.filter(t => t.placeId && !t.place).map(t => t.placeId).join(', ');
+        msg = `📍 장소ID 매칭 실패 (참조: ${withPid} / 찾음: ${matched})<br><span style="font-size:11px">누락 ID: ${missing} · [장소] 시트 확인</span>`;
+      } else {
+        msg = '📍 매칭된 장소에 위도·경도 없음<br><span style="font-size:11px">[장소] 시트에서 위도·경도 확인</span>';
+      }
+      emptyEl.innerHTML = msg;
+      emptyEl.hidden = false;
+    }
     return;
   }
   if(emptyEl) emptyEl.hidden = true;
