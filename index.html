@@ -867,9 +867,23 @@ function renderHome(){
 /* ═══════════════════════════════════════
    일정 렌더
    ═══════════════════════════════════════ */
+// 탭에 띄울 날짜 목록 = (TRIP_START~TRIP_END 범위) ∪ (시트에 실제로 있는 일차)
+// → 일정이 늘어도 코드 수정 불필요하고, 시트에 범위 밖 일차가 있어도 숨기지 않음
+function allDayCodes(){
+  const start = parseYMD(CONFIG.TRIP_START);
+  const end   = parseYMD(CONFIG.TRIP_END);
+  const span  = Math.round((end - start) / 86400000) + 1;
+  const set   = new Set();
+  for(let i = 1; i <= Math.max(span, 1); i++) set.add(i);
+  (state.plan || []).forEach(p => {
+    const n = parseInt(String(p.day).replace(/^D/i,''), 10);
+    if(n >= 1) set.add(n);
+  });
+  return [...set].sort((a,b) => a - b).map(n => 'D' + n);
+}
 function renderPlanTabs(){
   const el = document.getElementById('day-tabs');
-  const days = ['D1','D2','D3','D4','D5'];
+  const days = allDayCodes();
   el.innerHTML = days.map(d => {
     const info = dayLabel(d);
     const cnt = state.plan.filter(p => p.day === d).length;
